@@ -27,6 +27,16 @@ export const insert = internalMutation(
 
 export const profile = query((ctx) => ctx.auth.getUserIdentity())
 
+export const name = query(
+  async (ctx) => (await ctx.auth.getUserIdentity())?.name,
+)
+export const email = query(
+  async (ctx) => (await ctx.auth.getUserIdentity())?.email,
+)
+export const count = query(
+  async (ctx) => (await ctx.db.query('posts').collect()).length,
+)
+
 export const populate = action(async (ctx) => {
   const existing = await ctx.runQuery(api.posts.list)
   if (existing.length) {

@@ -37,7 +37,7 @@ export function createRouter() {
       defaultPreload: 'intent',
       defaultErrorComponent: DefaultCatchBoundary,
       defaultNotFoundComponent: () => <NotFound />,
-      context: { queryClient, convexClient: convex },
+      context: { queryClient, convexClient: convex, convexQueryClient },
       Wrap: ({ children }) => {
         // Since this wraps the router, it can't use the router!
         // The reason ConvexProvider goes outside the wrapper is so

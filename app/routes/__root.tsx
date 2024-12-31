@@ -22,21 +22,24 @@ import { getWebRequest } from 'vinxi/http'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary.js'
 import { NotFound } from '~/components/NotFound.js'
 import appCss from '~/styles/app.css?url'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
+import { ConvexQueryClient } from '@convex-dev/react-query'
 
 const fetchClerkAuth = createServerFn({ method: 'GET' }).handler(async () => {
   const auth = await getAuth(getWebRequest())
-  const token = auth.getToken({ template: 'convex' })
+  const token = await auth.getToken({ template: 'convex' })
 
   return {
     userId: auth.userId,
+    token,
   }
 })
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
   convexClient: ConvexReactClient
+  convexQueryClient: ConvexQueryClient
 }>()({
   head: () => ({
     meta: [
@@ -71,12 +74,19 @@ export const Route = createRootRouteWithContext<{
       { rel: 'icon', href: '/favicon.ico' },
     ],
   }),
-  beforeLoad: async () => {
+  beforeLoad: async (ctx) => {
     const auth = await fetchClerkAuth()
-    const { userId } = auth
+    const { userId, token } = auth
+
+    // During SSR only (the only time serverHttpClient exists),
+    // set the Clerk auth token to make HTTP queries with.
+    if (token) {
+      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
+    }
 
     return {
       userId,
+      token,
     }
   },
   errorComponent: (props) => {
@@ -91,11 +101,14 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
+  const context = useRouteContext({ from: Route.id })
   return (
     <ClerkProvider>
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
+      <ConvexProviderWithClerk client={context.convexClient} useAuth={useAuth}>
+        <RootDocument>
+          <Outlet />
+        </RootDocument>
+      </ConvexProviderWithClerk>
     </ClerkProvider>
   )
 }

@@ -1,5 +1,5 @@
 import { convexQuery } from '@convex-dev/react-query'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 
@@ -25,17 +25,23 @@ function PostsComponent() {
   if (isPending) return <>loading..</>
   if (error) return <>error..</>
 
-  /*
-    const { data: profile } = useQuery({
-    ...convexQuery(api.posts.profile, {}),
-  })
-  */
+  // Not server-rendered
+  const { data: count } = useQuery(convexQuery(api.posts.count, {}))
+  // Not server-rendered and null until authed
+  const { data: profile } = useQuery(convexQuery(api.posts.profile, {}))
+  // Server-rendered
+  const { data: email } = useSuspenseQuery(convexQuery(api.posts.email, {}))
 
   return (
-    <div className="p-2 flex gap-2">
-      <code>
-        <pre>{JSON.stringify(1, null, 2)}</pre>
-      </code>
+    <div className="p-2 flex gap-2 flex-col">
+      <div>server-rendered email: {email}</div>
+      <div>client-rendered but no auth required (pops in): {count}</div>
+      <div>
+        {
+          'client-rendered and requires auth (could be momentarily null if not protected by <Authenticated>): '
+        }
+        {profile?.email}
+      </div>
       <ul className="list-disc pl-4">
         {[...posts, { id: 'i-do-not-exist', title: 'Non-existent Post' }].map(
           (post) => {
